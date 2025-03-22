@@ -1,0 +1,133 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  password      String
+  role          String    // "teacher", "volunteer", or "parent"
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Teacher relationships
+  teacherClasses       Class[]        @relation("TeacherClasses")
+  volunteerRequests    VolunteerRequest[] @relation("TeacherRequests")
+  sentMessages         Message[]      @relation("SentMessages")
+  receivedMessages     Message[]      @relation("ReceivedMessages")
+  
+  // Volunteer relationships
+  expertise            String?
+  qualifications       String?
+  availability         Availability[]
+  volunteerClasses     VolunteerClass[]
+  
+  // Parent relationships
+  students             Student[]
+}
+
+model Student {
+  id            String    @id @default(cuid())
+  name          String
+  grade         String
+  parentId      String
+  parent        User      @relation(fields: [parentId], references: [id])
+  performances  Performance[]
+  attendances   Attendance[]
+}
+
+model Class {
+  id            String    @id @default(cuid())
+  subject       String
+  date          DateTime
+  startTime     String
+  endTime       String
+  description   String?
+  teacherId     String
+  teacher       User      @relation("TeacherClasses", fields: [teacherId], references: [id])
+  needsVolunteer Boolean  @default(false)
+  
+  volunteerRequests VolunteerRequest[]
+  volunteerClasses  VolunteerClass[]
+  attendances       Attendance[]
+  materials         Material[]
+}
+
+model VolunteerRequest {
+  id            String    @id @default(cuid())
+  classId       String
+  class         Class     @relation(fields: [classId], references: [id])
+  teacherId     String
+  teacher       User      @relation("TeacherRequests", fields: [teacherId], references: [id])
+  status        String    // "pending", "accepted", "declined"
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model VolunteerClass {
+  id            String    @id @default(cuid())
+  classId       String
+  class         Class     @relation(fields: [classId], references: [id])
+  volunteerId   String
+  volunteer     User      @relation(fields: [volunteerId], references: [id])
+  status        String    // "confirmed", "cancelled"
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Availability {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id])
+  dayOfWeek     Int       // 0-6 (Sunday-Saturday)
+  startTime     String
+  endTime       String
+}
+
+model Performance {
+  id            String    @id @default(cuid())
+  studentId     String
+  student       Student   @relation(fields: [studentId], references: [id])
+  subject       String
+  grade         String
+  comments      String?
+  date          DateTime
+}
+
+model Attendance {
+  id            String    @id @default(cuid())
+  studentId     String
+  student       Student   @relation(fields: [studentId], references: [id])
+  classId       String
+  class         Class     @relation(fields: [classId], references: [id])
+  status        String    // "present", "absent", "late"
+  date          DateTime
+}
+
+model Material {
+  id            String    @id @default(cuid())
+  title         String
+  description   String?
+  fileUrl       String
+  classId       String
+  class         Class     @relation(fields: [classId], references: [id])
+  uploadedAt    DateTime  @default(now())
+}
+
+model Message {
+  id            String    @id @default(cuid())
+  content       String
+  senderId      String
+  sender        User      @relation("SentMessages", fields: [senderId], references: [id])
+  receiverId    String
+  receiver      User      @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  read          Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+}
+
